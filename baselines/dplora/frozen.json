@@ -1,0 +1,30 @@
+{
+ "_note": "Frozen on Jakarta only (composite vs train, lower is better; runs in $TRAJPE_WORK/runs/baselines_v2/dplora/_tune/jakarta). batch/epochs are the expected batch size / passes at N_REF = 74,685 (q = batch / 74685, T = round(epochs / q)). See README.md, 'Jakarta tuning'.",
+ "4": {
+  "batch": 1024,
+  "epochs": 3,
+  "lr": 0.003,
+  "rank": 8,
+  "clip": 1.0,
+  "jakarta_composite": -1.9457,
+  "evidence": "lr 1e-3 -1.699 / 3e-3 -1.913 / 6e-3 diverged (b2048); batch 1024 -1.946 vs 2048 -1.913 (3 epochs, same compute); epochs 1.5 -1.578 vs 3 -1.913 (3 = budget maximum for the finals); rank 16 -1.888 vs 8 -1.913; clip 1: 100% of per-example gradients clipped (norms 2-6), so with Adam any smaller C gives the same updates"
+ },
+ "1": {
+  "batch": 2048,
+  "epochs": 3,
+  "lr": 0.003,
+  "rank": 8,
+  "clip": 1.0,
+  "jakarta_composite": -1.8284,
+  "evidence": "lr 1e-3 -1.550 / 3e-3 -1.828 (b2048); lr 6e-3 stopped early (training loss behind 3e-3 at every logged step; diverged at eps=4); batch/rank/clip/epochs not re-tested at eps=1 (budget): rank 8, clip 1 and 3 epochs follow the eps=4 evidence, batch stays at the tested 2048"
+ },
+ "inf": {
+  "batch": 64,
+  "epochs": 2,
+  "lr": 0.001,
+  "rank": 16,
+  "clip": 1.0,
+  "jakarta_composite": -2.039,
+  "evidence": "non-private: 2 epochs lr 1e-3 -2.039 vs 1 epoch lr 5e-4 -1.952 (batch 64, rank 16; clip unused)"
+ }
+}

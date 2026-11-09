@@ -1,0 +1,481 @@
+{
+ "_note": "DP-LoRA v2 (2026-10-21): the strongest fair version of the DP fine-tuning baseline, every choice made on Jakarta only (composite vs train + Markov next-POI MRR on the Jakarta test split; runs in $TRAJPE_WORK/runs/baselines_v2/dplora/_tune/jakarta_v2). v1 (frozen.json) stays reproducible: each v2 change is a flag whose default is the v1 behaviour. Training hyper-parameters (batch, epochs, lr, rank, clip) are the v1 Jakarta-tuned ones. Grid jobs: jobs.py v2 (pipeline.py flags are built from 'format', 'train_v2', 'sample_v2', 'vp_ground_v2' (vp only) and models[...].pipeline).",
+ "_changes": {
+  "a_format": "4-decimal coordinates (textfmt decimals=4). Real Jakarta trails through text + nearest-venue grounding keep 51.2% of exact venues with 3 decimals vs 94.2% with 4; Markov MRR ceiling 0.0430 (3 dec) vs 0.1190 (4 dec), real 50k 0.1319.",
+  "b_decoding": "per-line repair (sample_vllm.py --decode repair): a malformed / out-of-list-category line is dropped instead of the whole trail. Chosen over constrained decoding (--decode constrained: vLLM structured outputs, textfmt.ebnf over the public category list) and v1 whole-trail rejection by TrajPE's rule (max Jakarta Markov MRR s.t. composite <= best + 0.03); see 'jakarta_selection'.",
+  "c_sampling": "temperature 1, top-p 1 (swept on Jakarta: top-p 0.95/0.9 and temperature 0.9/1.1 all cost 0.07-0.44 composite with no MRR gain).",
+  "d_model": "train.py / sample_vllm.py / sample.py --model, train.py --grad_ckpt (reentrant checkpointing under Opacus; test_dp.py (e)). Model entries below.",
+  "e_eps_inf": "train.py --inf_steps nref (T = round(epochs * N_REF / batch) = the Jakarta-tuned 2,334 steps in every city) and --inf_clip 1.0 (global gradient-norm clipping).",
+  "f_accounting": "pld_check.py composes the prior's Gaussians for vp sidecars and checks the release gates; ground.py refuses a train.json with oom_retries != 0 or complete == false.",
+  "g_vp_grounding": "dploravp grounding scale (ground.py --ground_scale_km / --pop_radius_km; TrajPE's Grounder defaults 0.5 km / 1 km were made for imprecise coordinates): chosen per eps by TrajPE's rule on re-groundings of the same DP texts (post-processing)."
+ },
+ "default_model": "0.5b",
+ "format": {
+  "coord_decimals": 4
+ },
+ "models": {
+  "0.5b": {
+   "pipeline": {},
+   "cap_gb": 26,
+   "cost_factor": 1.0,
+   "jakarta_eps4": {
+    "sec_per_step": 8.0,
+    "peak_mem_gb": 20.7,
+    "train_sec": 1762,
+    "note": "v1 run (tok_budget 8192 / tgt_budget 4096, no checkpointing)"
+   }
+  },
+  "7b": {
+   "pipeline": {
+    "model": "Qwen/Qwen2.5-7B-Instruct",
+    "grad_ckpt": true,
+    "tok_budget": 4096,
+    "tgt_budget": 2048
+   },
+   "cap_gb": 30,
+   "cost_factor": 3.7,
+   "cap_note": "uncapped 7B DP-SGD processes reserve 32-35 GB (peak allocated 21.7 GB); cap 30 GiB leaves room for allocator fragmentation (an OOM retry makes ground.py refuse the release) and fits two 7B jobs per H100 (94 GB), not three; vLLM sampling of 7B takes ~25 GB (14.3 weights + 8 KV + graphs)",
+   "jakarta_eps4": {
+    "sec_per_step": 29.6,
+    "peak_mem_gb": 21.74,
+    "steps": 219,
+    "train_sec": 7320,
+    "sample_sec": 293,
+    "valid_rate": 0.948,
+    "note": "full Jakarta eps=4 run (219 steps) instead of a few-hundred-step probe; sec_per_step = lower-quartile window (GPU 1 shared with 0.5B eps=inf runs for the first ~40 min); peak = torch max allocated with gradient checkpointing and micro-batch budgets 4096 / 2048 tokens (memory only: the clipped sum does not depend on the split)",
+    "projected_release_gpu_h_per_city": "about 1.9 h at Jakarta size (9.5 M tokens); scale by jobs.py TOKENS_M (istanbul 15.2, tokyo 13.1, nyc 7.7, sao_paulo 7.2, kuwait_city 6.4)"
+   }
+  },
+  "1.5b": {
+   "pipeline": {
+    "model": "Qwen/Qwen2.5-1.5B-Instruct",
+    "grad_ckpt": true,
+    "tok_budget": 4096,
+    "tgt_budget": 2048
+   },
+   "cap_gb": 26,
+   "cost_factor": 1.6,
+   "status": "untested: weights not in $TRAJPE_WORK/hf_cache (train/sample run with HF_HUB_OFFLINE=1, download first); cost_factor interpolated by parameter count"
+  },
+  "3b": {
+   "pipeline": {
+    "model": "Qwen/Qwen2.5-3B-Instruct",
+    "grad_ckpt": true,
+    "tok_budget": 4096,
+    "tgt_budget": 2048
+   },
+   "cap_gb": 26,
+   "cost_factor": 2.3,
+   "status": "untested: weights not in $TRAJPE_WORK/hf_cache (train/sample run with HF_HUB_OFFLINE=1, download first); cost_factor interpolated by parameter count"
+  }
+ },
+ "eps": {
+  "4": {
+   "batch": 1024,
+   "epochs": 3,
+   "lr": 0.003,
+   "rank": 8,
+   "clip": 1.0,
+   "train_v2": {},
+   "sample_v2": {
+    "decode": "repair",
+    "temperature": 1.0,
+    "top_p": 1.0
+   },
+   "vp_ground_v2": {
+    "ground_scale_km": 0.05,
+    "pop_radius_km": 1.0
+   }
+  },
+  "1": {
+   "batch": 2048,
+   "epochs": 3,
+   "lr": 0.003,
+   "rank": 8,
+   "clip": 1.0,
+   "train_v2": {},
+   "sample_v2": {
+    "decode": "repair",
+    "temperature": 1.0,
+    "top_p": 1.0
+   },
+   "vp_ground_v2": {
+    "ground_scale_km": 0.05,
+    "pop_radius_km": 0.3
+   }
+  },
+  "inf": {
+   "batch": 64,
+   "epochs": 2,
+   "lr": 0.001,
+   "rank": 16,
+   "clip": 1.0,
+   "train_v2": {
+    "inf_steps": "nref",
+    "inf_clip": 1.0
+   },
+   "sample_v2": {
+    "decode": "repair",
+    "temperature": 1.0,
+    "top_p": 1.0
+   }
+  }
+ },
+ "jakarta": {
+  "_how": "composite_vs_train (trajpe.metrics.composite_score, lower is better) and Markov next-POI MRR on the Jakarta test split (downstream/train_eval.py --model markov; run on GPU 1, equal to the CPU evaluator to 1e-8 on the v1 eps=4 release). v2 = the frozen v2 settings above; seed = sampling seed of the same trained adapter.",
+  "format_ceiling": {
+   "real_50k_markov_mrr": 0.1319,
+   "3_decimals": {
+    "exact_venue_kept": 0.5118,
+    "markov_mrr": 0.043
+   },
+   "4_decimals": {
+    "exact_venue_kept": 0.9422,
+    "markov_mrr": 0.119
+   }
+  },
+  "eps4": {
+   "v1_plain": {
+    "composite": -1.9457,
+    "markov_mrr": 0.0209,
+    "markov_cat_mrr": 0.2334,
+    "checkins_per_trail": 2.385,
+    "release": "$TRAJPE_WORK/runs/baselines_v2/dplora/_tune/jakarta/b1024_e3_lr0.003_r8_c1_eps4_s0.parquet"
+   },
+   "v2_plain_seed0": {
+    "composite": -2.0132,
+    "markov_mrr": 0.0596,
+    "markov_cat_mrr": 0.2338,
+    "checkins_per_trail": 2.488,
+    "release": "$TRAJPE_WORK/runs/baselines_v2/dplora/_tune/jakarta_v2/b1024_e3_lr0.003_r8_c1_d4_eps4_s0__rep_t1_p1_s0.parquet"
+   },
+   "v2_plain_seed1": {
+    "composite": -2.0037,
+    "markov_mrr": 0.0588,
+    "markov_cat_mrr": 0.2337,
+    "checkins_per_trail": 2.49,
+    "release": "$TRAJPE_WORK/runs/baselines_v2/dplora/_tune/jakarta_v2/b1024_e3_lr0.003_r8_c1_d4_eps4_s0__rep_t1_p1_r1_s0.parquet"
+   },
+   "v1_vp": {
+    "composite": -1.8265,
+    "markov_mrr": 0.0706,
+    "markov_cat_mrr": 0.2309,
+    "checkins_per_trail": 2.405,
+    "release": "$TRAJPE_WORK/runs/baselines_v2/dplora/_tune/jakarta_v2/v1vp_b1024_e3_lr0.003_r8_c1_eps4_s0.parquet"
+   },
+   "v2_vp": {
+    "composite": -1.9725,
+    "markov_mrr": 0.0762,
+    "markov_cat_mrr": 0.2312,
+    "checkins_per_trail": 2.475,
+    "release": "$TRAJPE_WORK/runs/baselines_v2/dplora/_tune/jakarta_v2/vp_b1024_e3_lr0.003_r8_c1_d4_eps4_s0__rep_t1_p1_k10_s0.05_r1.0_s0.parquet"
+   },
+   "v2_plain_7b": {
+    "composite": -2.0783,
+    "markov_mrr": 0.0604,
+    "markov_cat_mrr": 0.2352,
+    "checkins_per_trail": 2.537,
+    "release": "$TRAJPE_WORK/runs/baselines_v2/dplora/_tune/jakarta_v2/b1024_e3_lr0.003_r8_c1_d4_7b_eps4_s0__rep_t1_p1_s0.parquet"
+   },
+   "v2_vp_7b": {
+    "composite": -2.0249,
+    "markov_mrr": 0.0752,
+    "markov_cat_mrr": 0.2343,
+    "checkins_per_trail": 2.533,
+    "release": "$TRAJPE_WORK/runs/baselines_v2/dplora/_tune/jakarta_v2/vp_b1024_e3_lr0.003_r8_c1_d4_7b_eps4_s0__rep_t1_p1_k10_s0.05_r1.0_s0.parquet"
+   }
+  },
+  "eps1": {
+   "v1_plain": {
+    "composite": -1.8284,
+    "markov_mrr": 0.0177,
+    "markov_cat_mrr": 0.2291,
+    "checkins_per_trail": 2.398,
+    "release": "$TRAJPE_WORK/runs/baselines_v2/dplora/_tune/jakarta/b2048_e3_lr0.003_r8_c1_eps1_s0.parquet"
+   },
+   "v2_plain_seed0": {
+    "composite": -1.8746,
+    "markov_mrr": 0.0468,
+    "markov_cat_mrr": 0.2289,
+    "checkins_per_trail": 2.474,
+    "release": "$TRAJPE_WORK/runs/baselines_v2/dplora/_tune/jakarta_v2/b2048_e3_lr0.003_r8_c1_d4_eps1_s0__rep_t1_p1_s0.parquet"
+   },
+   "v2_plain_seed1": {
+    "composite": -1.8919,
+    "markov_mrr": 0.0475,
+    "markov_cat_mrr": 0.2314,
+    "checkins_per_trail": 2.48,
+    "release": "$TRAJPE_WORK/runs/baselines_v2/dplora/_tune/jakarta_v2/b2048_e3_lr0.003_r8_c1_d4_eps1_s0__rep_t1_p1_r1_s0.parquet"
+   },
+   "v1_vp": {
+    "composite": -1.7552,
+    "markov_mrr": 0.0639,
+    "markov_cat_mrr": 0.2295,
+    "checkins_per_trail": 2.412,
+    "release": "$TRAJPE_WORK/runs/baselines_v2/dplora/_tune/jakarta_v2/v1vp_b2048_e3_lr0.003_r8_c1_eps1_s0.parquet"
+   },
+   "v2_vp": {
+    "composite": -1.8515,
+    "markov_mrr": 0.0664,
+    "markov_cat_mrr": 0.2285,
+    "checkins_per_trail": 2.492,
+    "release": "$TRAJPE_WORK/runs/baselines_v2/dplora/_tune/jakarta_v2/vp_b2048_e3_lr0.003_r8_c1_d4_eps1_s0__rep_t1_p1_k10_s0.05_r0.3_s0.parquet"
+   },
+   "v2_plain_7b": {
+    "composite": -1.9506,
+    "markov_mrr": 0.0424,
+    "markov_cat_mrr": 0.2308,
+    "checkins_per_trail": 2.544,
+    "release": "$TRAJPE_WORK/runs/baselines_v2/dplora/_tune/jakarta_v2/b2048_e3_lr0.003_r8_c1_d4_7b_eps1_s0__rep_t1_p1_s0.parquet"
+   },
+   "v2_vp_7b": {
+    "composite": -1.9383,
+    "markov_mrr": 0.0644,
+    "markov_cat_mrr": 0.2315,
+    "checkins_per_trail": 2.57,
+    "release": "$TRAJPE_WORK/runs/baselines_v2/dplora/_tune/jakarta_v2/vp_b2048_e3_lr0.003_r8_c1_d4_7b_eps1_s0__rep_t1_p1_k10_s0.05_r0.3_s0.parquet"
+   }
+  },
+  "epsinf": {
+   "v1": {
+    "composite": -2.039,
+    "markov_mrr": 0.0271,
+    "markov_cat_mrr": 0.2428,
+    "checkins_per_trail": 2.362,
+    "release": "$TRAJPE_WORK/runs/baselines_v2/dplora/_tune/jakarta/b64_e2_lr0.001_r16_epsinf_s0.parquet"
+   },
+   "v2": {
+    "composite": -2.039,
+    "markov_mrr": 0.0818,
+    "markov_cat_mrr": 0.2419,
+    "checkins_per_trail": 2.402,
+    "release": "$TRAJPE_WORK/runs/baselines_v2/dplora/_tune/jakarta_v2/b64_e2_lr0.001_r16_d4_nref_clip1_epsinf_s0__rep_t1_p1_s0.parquet"
+   },
+   "v2_stress_3950_steps_no_clip": {
+    "composite": -0.9066,
+    "markov_mrr": 0.0056,
+    "markov_cat_mrr": 0.2151,
+    "checkins_per_trail": 2.288,
+    "release": "$TRAJPE_WORK/runs/baselines_v2/dplora/_tune/jakarta_v2/b64_e3.385_lr0.001_r16_d4_epsinf_s0__rep_t1_p1_s0.parquet"
+   },
+   "v2_stress_3950_steps_clip1_only": {
+    "composite": -2.0977,
+    "markov_mrr": 0.0846,
+    "markov_cat_mrr": 0.2444,
+    "checkins_per_trail": 2.383,
+    "release": "$TRAJPE_WORK/runs/baselines_v2/dplora/_tune/jakarta_v2/b64_e3.385_lr0.001_r16_d4_clip1_epsinf_s0__rep_t1_p1_s0.parquet"
+   },
+   "v2_7b": {
+    "composite": -1.0166,
+    "markov_mrr": 0.0184,
+    "markov_cat_mrr": 0.2163,
+    "checkins_per_trail": 2.38,
+    "release": "$TRAJPE_WORK/runs/baselines_v2/dplora/_tune/jakarta_v2/b64_e2_lr0.001_r16_d4_nref_clip1_7b_epsinf_s0__rep_t1_p1_s0.parquet"
+   }
+  }
+ },
+ "jakarta_selection": {
+  "rule": "TrajPE's: maximise Jakarta Markov MRR subject to composite <= best composite + 0.03 (per eps, over all candidates of that eps; the decoding/sampling choice made on plain is applied to vp, the vp grounding chosen on the vp texts)",
+  "candidates_composite_markov_mrr": {
+   "b1024_e3_d4_eps4_s0 con_t0.9_p1": [
+    -1.8505,
+    0.0594
+   ],
+   "b1024_e3_d4_eps4_s0 con_t1_p0.95": [
+    -1.9198,
+    0.0589
+   ],
+   "b1024_e3_d4_eps4_s0 con_t1_p0.9": [
+    -1.5727,
+    0.0589
+   ],
+   "b1024_e3_d4_eps4_s0 con_t1_p1_r1": [
+    -1.985,
+    0.0589
+   ],
+   "b1024_e3_d4_eps4_s0 con_t1_p1": [
+    -1.985,
+    0.0586
+   ],
+   "b1024_e3_d4_eps4_s0 rej_t1_p1": [
+    -1.9748,
+    0.0593
+   ],
+   "b1024_e3_d4_eps4_s0 rep_t0.9_p1": [
+    -1.8039,
+    0.0595
+   ],
+   "b1024_e3_d4_eps4_s0 rep_t1.1_p1": [
+    -1.7912,
+    0.0581
+   ],
+   "b1024_e3_d4_eps4_s0 rep_t1_p1_r1": [
+    -2.0037,
+    0.0588
+   ],
+   "b1024_e3_d4_eps4_s0 rep_t1_p1": [
+    -2.0132,
+    0.0596
+   ],
+   "b2048_e3_d4_eps1_s0 con_t0.9_p1": [
+    -1.8366,
+    0.0471
+   ],
+   "b2048_e3_d4_eps1_s0 con_t1_p0.95": [
+    -1.8076,
+    0.0465
+   ],
+   "b2048_e3_d4_eps1_s0 con_t1_p0.9": [
+    -1.532,
+    0.046
+   ],
+   "b2048_e3_d4_eps1_s0 con_t1_p1_r1": [
+    -1.8638,
+    0.0459
+   ],
+   "b2048_e3_d4_eps1_s0 con_t1_p1": [
+    -1.8529,
+    0.0471
+   ],
+   "b2048_e3_d4_eps1_s0 rej_t1_p1": [
+    -1.8569,
+    0.047
+   ],
+   "b2048_e3_d4_eps1_s0 rep_t0.9_p1": [
+    -1.8199,
+    0.0479
+   ],
+   "b2048_e3_d4_eps1_s0 rep_t1.1_p1": [
+    -1.6534,
+    0.0465
+   ],
+   "b2048_e3_d4_eps1_s0 rep_t1_p1_r1": [
+    -1.8919,
+    0.0475
+   ],
+   "b2048_e3_d4_eps1_s0 rep_t1_p1": [
+    -1.8746,
+    0.0468
+   ],
+   "vp_b1024_e3_d4_eps4_s0 rep_t1_p1_k10_s0.03_r1.0": [
+    -1.9947,
+    0.076
+   ],
+   "vp_b1024_e3_d4_eps4_s0 rep_t1_p1_k10_s0.05_r0.3": [
+    -1.9802,
+    0.0761
+   ],
+   "vp_b1024_e3_d4_eps4_s0 rep_t1_p1_k10_s0.05_r1.0": [
+    -1.9725,
+    0.0762
+   ],
+   "vp_b1024_e3_d4_eps4_s0 rep_t1_p1_k10_s0.1_r0.3": [
+    -1.9578,
+    0.0762
+   ],
+   "vp_b1024_e3_d4_eps4_s0 rep_t1_p1_k10_s0.1_r1.0": [
+    -1.9307,
+    0.0757
+   ],
+   "vp_b1024_e3_d4_eps4_s0 rep_t1_p1_k10_s0.2_r1.0": [
+    -1.8929,
+    0.0748
+   ],
+   "vp_b1024_e3_d4_eps4_s0 rep_t1_p1": [
+    -1.8624,
+    0.0733
+   ],
+   "vp_b2048_e3_d4_eps1_s0 rep_t1_p1_k10_s0.03_r1.0": [
+    -1.8657,
+    0.0659
+   ],
+   "vp_b2048_e3_d4_eps1_s0 rep_t1_p1_k10_s0.05_r0.3": [
+    -1.8515,
+    0.0664
+   ],
+   "vp_b2048_e3_d4_eps1_s0 rep_t1_p1_k10_s0.05_r1.0": [
+    -1.8516,
+    0.0662
+   ],
+   "vp_b2048_e3_d4_eps1_s0 rep_t1_p1_k10_s0.1_r0.3": [
+    -1.8244,
+    0.0665
+   ],
+   "vp_b2048_e3_d4_eps1_s0 rep_t1_p1_k10_s0.1_r1.0": [
+    -1.818,
+    0.0665
+   ],
+   "vp_b2048_e3_d4_eps1_s0 rep_t1_p1_k10_s0.2_r1.0": [
+    -1.792,
+    0.0658
+   ],
+   "vp_b2048_e3_d4_eps1_s0 rep_t1_p1": [
+    -1.7646,
+    0.0642
+   ]
+  },
+  "decision": "decode repair, temperature 1, top-p 1 at eps 4 and 1 (single-seed picks; also with the two-seed means: eps4 repair -2.008 / 0.0592 vs constrained -1.985 / 0.0588, eps1 repair -1.883 / 0.0472 vs constrained -1.858 / 0.0465; v1 rejection -1.975 / 0.0593 is outside the 0.03 band at eps4). Any top-p < 1 or temperature != 1 costs 0.07-0.44 composite (top-p truncates the digit distributions of times and coordinates). vp grounding scale 0.05 km (radius 1 km at eps4, 0.3 km at eps1; 0.01-0.02 km underflow in trajpe's Grounder)."
+ },
+ "recommended_model": {
+  "rule": "TrajPE's rule over the model sizes run on Jakarta (max Markov MRR s.t. composite <= best + 0.03); jobs.py v2 --model <key>; the grid default_model key only names the output dirs",
+  "candidates_composite_markov_mrr": {
+   "eps4_plain": {
+    "0.5b": [
+     -2.0132,
+     0.0596
+    ],
+    "7b": [
+     -2.0783,
+     0.0604
+    ]
+   },
+   "eps4_vp": {
+    "0.5b": [
+     -1.9725,
+     0.0762
+    ],
+    "7b": [
+     -2.0249,
+     0.0752
+    ]
+   },
+   "eps1_plain": {
+    "0.5b": [
+     -1.8746,
+     0.0468
+    ],
+    "7b": [
+     -1.9506,
+     0.0424
+    ]
+   },
+   "eps1_vp": {
+    "0.5b": [
+     -1.8515,
+     0.0664
+    ],
+    "7b": [
+     -1.9383,
+     0.0644
+    ]
+   },
+   "epsinf_plain": {
+    "0.5b": [
+     -2.039,
+     0.0818
+    ],
+    "7b": [
+     -1.0166,
+     0.0184
+    ]
+   }
+  },
+  "pick": {
+   "eps4_plain": "7b",
+   "eps4_vp": "7b",
+   "eps1_plain": "7b",
+   "eps1_vp": "7b",
+   "epsinf_plain": "0.5b"
+  }
+ }
+}

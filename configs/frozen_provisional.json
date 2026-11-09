@@ -1,0 +1,2 @@
+{"n_syn": 20000, "T": 5, "threshold_sigmas": 1.0, "marg_frac": 0.1, "use_marginals": true,
+ "pop_alpha_share": 0.3, "degree_start": 1.0, "degree_end": 0.05}

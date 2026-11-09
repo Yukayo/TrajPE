@@ -1,0 +1,51 @@
+{
+ "_note": "DP-LoRA with the source papers' settings (owner rule 2026-10-26: no baseline tuning; every setting is the authors' value, or one arbitrary documented value where the authors give none). Contract: docs/baselines/DPLORA_DEFAULTS.md (rules R1-R5, per-setting sources). Frozen by frozen/dplora_default_v1.sha256 before any run. Jobs: scripts/queue_dplora_default.py (pipeline_default.py --stage gpu, then queue_baselines.py dplora_cpu; no metric on any evaluation dataset). The Jakarta-tuned frozen_v2.json / frozen.json are not used; their releases stay on disk as 'legacy tuned' reference rows.",
+ "version": "dplora_default_v1",
+ "doc": "docs/baselines/DPLORA_DEFAULTS.md",
+ "sources": {
+  "kurakin": "Kurakin, Ponomareva, Syed, MacDermed, Terzis. Harnessing large-language models to generate private synthetic text. arXiv 2306.01684v2 (11 Jan 2024), the version that adds LoRA. No public code found. Primary author of both parts (rule R1).",
+  "yue": "Yue, Inan, Li, Kumar, McAnallen, Shajari, Sun, Levitan, Sim. Synthetic Text Generation with Differential Privacy: A Simple and Practical Recipe. ACL 2023 (arXiv 2210.14348v3, 18 Jul 2023). Code: github.com/microsoft/dp-transformers, research/synthetic-text-generation-with-DP (commit 4ec84e92bc4b221233ce2c6778b3e7a81809e85b). Secondary source (rule R2).",
+  "copies": "$TRAJPE_WORK/baselines_src/dplora/{papers,dp-transformers} (read-only)"
+ },
+ "rows": {
+  "dplora_def": {"model_key": "0.5b", "variant": "plain"},
+  "dplora_def_vp": {"model_key": "0.5b", "variant": "vp"},
+  "dplora_def7b": {"model_key": "7b", "variant": "plain"},
+  "dplora_def7b_vp": {"model_key": "7b", "variant": "vp"}
+ },
+ "models": {
+  "0.5b": {"hub_id": "Qwen/Qwen2.5-0.5B-Instruct", "pipeline": {}, "cap_gb": 26,
+           "source": "owner rule: the backbone of our method (main grid)"},
+  "7b": {"hub_id": "Qwen/Qwen2.5-7B-Instruct",
+         "pipeline": {"model": "Qwen/Qwen2.5-7B-Instruct", "grad_ckpt": true, "tok_budget": 4096, "tgt_budget": 2048},
+         "cap_gb": 30,
+         "source": "owner rule: 7B robustness row; grad_ckpt and the micro-batch token budgets are memory-only (the clipped sum does not depend on the split; test_dp.py (e)) and are the frozen v2 7B values"}
+ },
+ "settings": {
+  "_not_keyed_by_eps": "the same values at every eps; only sigma is recalibrated by the accountant for the target eps (EPS28 rule: eps 2 = eps-1 settings, eps 8 = eps-4 settings, identical here)",
+  "pipeline": {"batch": 1024, "epochs": 10, "lr": 0.0003, "rank": 8, "clip": 1.0, "max_new": 512},
+  "train_default": {"lora_alpha": 32, "lr_schedule": "constant", "max_target_tokens": 512},
+  "frozen_code_defaults_kept": {
+   "lora_dropout": 0.0,
+   "lora_targets": ["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"],
+   "lora_bias": "none",
+   "optimizer": "AdamW(betas=(0.9,0.999), eps=1e-8, weight_decay=0) = Adam without weight decay",
+   "loss": "per-example mean token cross-entropy over the response tokens + end token (Prefix-LM loss with per-example normalisation)",
+   "sampling": "Poisson, q = batch / N_REF, T = round(epochs / q), N_REF = 74685; noisy sum / B_NOM = batch",
+   "accountant": "PRV (Opacus) calibration to (eps, 1e-6), add/remove one trail; vp: PLD composition with the prior at eps - 0.015",
+   "decode": "reject", "temperature": 1.0, "top_p": 1.0, "top_k": 0, "min_p": 0.0, "n_per_request": 1,
+   "coord_decimals": 3, "jitter": 0, "n_out": 50000,
+   "vp_ground": {"ground_k": 10, "ground_scale_km": 0.5, "pop_radius_km": 1.0},
+   "vp_prior": "vp.py: 10% of mu^2 to the venue and category Gaussian histograms, alpha_share 0.1, max_popular 2000, threshold_sigmas(n_venues)"
+  }
+ },
+ "eps": [1, 2, 4, 8],
+ "expected_accounting": {
+  "_how": "computed 2026-10-26 before any run from public inputs only (dplora/accounting.py, vp.py calibrate); the runs recompute them",
+  "q": 0.013710919193947915, "T": 729,
+  "plain_sigma_prv": {"1": 1.7969, "2": 1.1377, "4": 0.8319, "8": 0.6485},
+  "vp_sigma_sgd": {"1": 1.8789, "2": 1.171, "4": 0.8469, "8": 0.6588},
+  "vp_sigma_hist": {"1": 18.8933, "2": 9.975, "4": 5.3376, "8": 2.92},
+  "vp_composed_pld": {"1": 0.985, "2": 1.9849, "4": 3.9846, "8": 7.9841}
+ }
+}

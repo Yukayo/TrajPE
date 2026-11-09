@@ -1,0 +1,50 @@
+{
+ "api": "sim",
+ "n_syn": 40000,
+ "T": 3,
+ "threshold_sigmas": 0.5,
+ "marg_frac": 0.4,
+ "pop_alpha_share": 0.1,
+ "degree_start": 1.0,
+ "degree_end": 0.05,
+ "q_trans": 0.5,
+ "p_successor": 0.4,
+ "work_frac": 0.07,
+ "work_families": "gap,hour_root,root_trans,hop,len_gyr,cell16,od8,weekhour",
+ "calib": "all",
+ "calib_families": "gap,hour_root,root_trans,hop,len_gyr,cell16,od8,weekhour,start,cat,venue,cat_trans,venue_trans",
+ "calib_iters": 200,
+ "calib_cap": 5.0,
+ "calib_cap_early": 3.0,
+ "calib_solver": "parallel",
+ "time_ground": "all",
+ "release_mode": "fusion",
+ "fuse_families": "gap,hour_root,root_trans,hop,len_gyr,cell16,od8,weekhour,start,cat,venue,cat_trans,venue_trans",
+ "fuse_rho": 0.2,
+ "fuse_gamma": 1.0,
+ "fuse_iters": 300,
+ "release_pool": 2,
+ "release_degree": 0.05,
+ "pool_diversify": 1.0,
+ "diversify_radius_km": 0.5,
+ "pool_solver": "fusion",
+ "fuse_gamma_refit": 1.0,
+ "release_sampler": "systematic",
+ "_release_postprocess": {
+  "script": "scripts/postprocess_release.py",
+  "p": 0.5,
+  "radius_km": 0.5,
+  "stream": "[seed, 7919]"
+ },
+ "_llm_variants": {
+  "hybrid": {
+   "api": "llm",
+   "sim_frac": 0.5
+  },
+  "llm_only": {
+   "api": "llm",
+   "sim_frac": 0.0
+  }
+ },
+ "_note": "used for eps in {4, 8}. TrajPE v3 = candidate Gn of results/tuning/jakarta_v3.md (Jakarta, simulator prior; rule: max mean composite over eps 1 and 4 s.t. Markov MRR >= frozen TrajPE-sim with the frozen diversification). Keys are scripts/run_pe.py flags; the release is the run's output followed by _release_postprocess. api 'sim' is the tuned prior; the LLM variants (api llm with sim_frac 0.5 / 0.0) reuse every other key, see jakarta_v3.md section 'LLM prior'. Not frozen (the coordinator freezes)."
+}

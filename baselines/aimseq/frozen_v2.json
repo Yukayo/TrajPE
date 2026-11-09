@@ -1,0 +1,43 @@
+{
+ "_doc": "AIM-seq baseline configuration v2 (owner rules 2026-10-22: no baseline tuning, seed 0). NOT chosen by results: official AIM defaults of mbi mechanisms/aim.py (all 2-way marginals with <= 10,000 cells, weight 1; T = 16 x #attributes; max_model_size 80; max_iters 1000; one-way initial cliques) + the a-priori trail encoding and the grid baselines' shared DP prior/decoder, written down in README.md section 'v2' before any v2 run. Read by run_aimseq.py --config frozen_v2.json. frozen.json (2026-10-21, tuned on Jakarta) is kept as a record only.",
+ "frozen_at": "2026-10-22T02:24Z",
+ "defaults": {
+  "mech": "aim",
+  "strata": "2-20",
+  "time_split": false,
+  "init": "oneway",
+  "rounds": 0,
+  "k_sub": 16,
+  "grid": 16,
+  "od_grid": 8,
+  "max_pos": 10,
+  "workload": "official2",
+  "max_model_size": 80.0,
+  "max_iters": 1000,
+  "prior_frac": 0.1,
+  "venue_prior": "dp",
+  "venue_floor": 0.6,
+  "venue_fp": 100.0,
+  "tilt": 0
+ },
+ "by_eps": {},
+ "seeds": [
+  0
+ ],
+ "eps": [
+  1,
+  4
+ ],
+ "variants": [
+  "trail",
+  "user (common.one_trail_per_user, user_seed 0)"
+ ],
+ "mbi_commit": "59e378de766bbc5403b8679a813ac42dde1a6909",
+ "code_sha256_at_freeze": {
+  "run_aimseq.py": "6035628b11f947b03e9215fcaf0b41fdb93dafc7600f131053a3e4199e415420",
+  "encoding.py": "11f404e643b4d1c64713ca14a934626f0a90948b64898375c40c28e8ec25573b",
+  "mech.py": "7142fd99cc91940fb984b4e181b0dd58b6235210181d45e6131e52ab158188d5",
+  "accounting.py": "fdeb682fb184f2925a29deefb070b82ff447c56536128540a27d5b1eb5bf405e",
+  "../common.py": "5139a367658084dffc4bf02310156480c5ce01cdff2c6892f19fbf4a4b335443"
+ }
+}

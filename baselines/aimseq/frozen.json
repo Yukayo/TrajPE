@@ -1,0 +1,32 @@
+{
+ "_doc": "AIM-seq settings chosen on Jakarta only (2026-10-21; tuning log and numbers in README.md, section 'Jakarta tuning'). run_aimseq.py reads 'defaults' (then 'by_eps', nearest eps in log scale); explicit flags override. Selection rule: lowest Jakarta composite vs train (trajpe.metrics.composite_score) at eps 4, checked at eps 1, among variants that run in <= ~40 min on 2 cores; decoder variants compared on the same DP records (redecode.py).",
+ "frozen_at": "2026-10-21T16:25Z",
+ "defaults": {
+  "mech": "aim",
+  "strata": "2-20",
+  "time_split": true,
+  "init": "oneway",
+  "rounds": 2.0,
+  "k_sub": 16,
+  "grid": 16,
+  "od_grid": 8,
+  "max_pos": 10,
+  "workload": "seq",
+  "max_model_size": 80.0,
+  "max_iters": 1000,
+  "prior_frac": 0.1,
+  "venue_prior": "dp",
+  "venue_floor": 0.6,
+  "venue_fp": 100.0,
+  "tilt": 1
+ },
+ "by_eps": {},
+ "mbi_commit": "59e378de766bbc5403b8679a813ac42dde1a6909",
+ "code_sha256_at_freeze": {
+  "run_aimseq.py": "f62813aa94bf61d954a2491d761318864eb0845484937d500d9f50cde448ec12",
+  "encoding.py": "11f404e643b4d1c64713ca14a934626f0a90948b64898375c40c28e8ec25573b",
+  "mech.py": "23b8488ff74e4462f78fa18a41882e9822e004cdf42a3a099046021862eff7f5",
+  "accounting.py": "fdeb682fb184f2925a29deefb070b82ff447c56536128540a27d5b1eb5bf405e",
+  "../common.py": "e973ed85c10b19c2dbe3bf5940ced3e4dcad3e6e58b5baf9c0c49f56d166c098"
+ }
+}

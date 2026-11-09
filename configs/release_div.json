@@ -1,0 +1,1 @@
+{"release_diversify": 0.5, "diversify_radius_km": 0.5, "chosen_on": "jakarta", "rule": "max downstream MRR (protocol v2) s.t. composite cost <= 0.03 at eps 1 and 4", "date": "2026-10-19"}

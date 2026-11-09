@@ -1,0 +1,59 @@
+{
+  "method": "PateGAIL++",
+  "paper": "Yingjie Ma, Bijal Bharadva, Xin Zhang, Joann Qiongna Chen. PateGAIL++: Utility Optimized Private Trajectory Generation with Imitation Learning. ICLR 2026.",
+  "spec": "docs/baselines/PATEGAIL_SPEC.md (sha256 a359b4041d60cca618be59be90c30ade2ad40f782f66ade7277d78739cdafe9b; pre-registration part frozen in frozen/pategail_v1.sha256)",
+  "official": {
+    "url": "https://github.com/yingjie1234/PATEGAIL-PlusPlus-Utility-Optimized-Private-Trajectory-Generation",
+    "commit": "fe8f78c64db2424d52178d608d3294f57646d980",
+    "license": "MIT License, Copyright (c) 2022 FIB LAB, Tsinghua University"
+  },
+  "owner_decisions": {
+    "D-K": {"K": 8221, "decided_by": "default of the SPEC (no owner answer before the freeze): K = |U_ref| = users of the public reference split (Jakarta train), the paper's rule K = |U| at the N_REF convention"},
+    "D-S": {"run_pg_uniform": true, "decided_by": "default of the SPEC (no owner veto before the freeze)"}
+  },
+  "privacy": {
+    "unit": "trail",
+    "neighbouring": "add/remove one trail of the train split",
+    "delta": 1e-06,
+    "aux_frac": 0.1,
+    "n_aux_hists": 6,
+    "pilot_share": 0.1,
+    "accountant": "zCDP (Laplace eps'^2/2) + zCDP filter (Feldman-Zrnic) + Canonne-Kamath-Steinke conversion (mbi cdp2adp)"
+  },
+  "hyper": {
+    "K": 8221,
+    "rounds": 50,
+    "beta": 0.01,
+    "delta_w": 0.01,
+    "train_iter": 100,
+    "traj_length_special_case": 20,
+    "max_closest_rank": 200,
+    "epr_alpha": 0.6,
+    "time_scale": 48,
+    "slot_minutes": 30,
+    "cell_deg": 0.01,
+    "policy": {"loc_emb": 32, "tim_emb": 8, "pre_pos_emb": 8, "stay_emb": 8, "hidden": 64, "heads": 8, "init": "U(-0.1, 0.1) (net.py init_params), torch.manual_seed(seed), policy then value"},
+    "teacher": {"loc_emb": 8, "tim_emb": 8, "pre_pos_emb": 8, "stay_emb": 4, "act_emb": 64, "hidden": 64, "mlp_in": 92, "init": "PyTorch defaults (Embedding N(0,1); Linear U(+-1/sqrt(fan_in)))"},
+    "disc_iter": 10,
+    "batch_size": 50,
+    "ppo_updates": 3,
+    "policy_iter": 1,
+    "value_iter": 1,
+    "clip_eps": 0.2,
+    "entropy_weight": 0.001,
+    "gamma": 0.99,
+    "lam": 0.95,
+    "lr": 0.001,
+    "weight_decay_policy_value": 1e-05,
+    "clip_grad": 10.0,
+    "venue_floor": 0.6,
+    "venue_fp": 100.0,
+    "start_cell_fp": 100.0,
+    "n_out": 50000,
+    "seed": 0
+  },
+  "arms": {
+    "main": {"label": "PateGAIL++", "allocation": "sensitivity-aware (DP pilot, eps_q proportional to w_q)", "out_dir": "$TRAJPE_WORK/runs/baselines_v2/pategail", "job_prefix": "pategail"},
+    "uniform": {"label": "PG-uniform", "allocation": "uniform eps_q = sqrt(rho_round / n_r), no pilot (A17)", "out_dir": "$TRAJPE_WORK/runs/baselines_v2/pategail_u", "job_prefix": "pategailu"}
+  }
+}

@@ -1,0 +1,56 @@
+{
+ "api": "sim",
+ "n_syn": 40000,
+ "T": 3,
+ "threshold_sigmas": 1.0,
+ "marg_frac": 0.4,
+ "pop_alpha_share": 0.1,
+ "degree_start": 1.0,
+ "degree_end": 0.05,
+ "q_trans": 0.5,
+ "p_successor": 0.4,
+ "work_frac": 0.245,
+ "work_families": "gap,hour_root,root_trans,hop,len_gyr,cell16,od8,weekhour,hb_cat,tdist,diam,od6,ctrans6,tcell6",
+ "calib": "all",
+ "calib_families": "gap,hour_root,root_trans,hop,len_gyr,cell16,od8,weekhour,start,cat,venue,cat_trans,venue_trans,tdist,diam,od6,ctrans6,tcell6",
+ "calib_iters": 200,
+ "calib_cap": 5.0,
+ "calib_cap_early": 3.0,
+ "calib_solver": "parallel",
+ "time_ground": "all",
+ "release_mode": "fusion",
+ "fuse_families": "gap,hour_root,root_trans,hop,len_gyr,cell16,od8,weekhour,start,cat,venue,cat_trans,venue_trans,tdist,diam,od6,ctrans6,tcell6",
+ "fuse_rho": 0.2,
+ "fuse_gamma": 1.0,
+ "fuse_iters": 300,
+ "release_pool": 4,
+ "release_degree": 0.2,
+ "pool_diversify": 1.0,
+ "diversify_radius_km": 0.5,
+ "pool_solver": "fusion",
+ "fuse_gamma_refit": 1.0,
+ "release_sampler": "systematic",
+ "sem_refine": 1.0,
+ "sem_refine_mode": "gibbs",
+ "sem_refine_stage": "pre_div",
+ "hop_law": "dp",
+ "pool_stretch": 0.02,
+ "q_popular": 0.25,
+ "_release_postprocess": {
+  "script": "scripts/postprocess_release.py",
+  "p": 0.5,
+  "radius_km": 0.5,
+  "stream": "[seed, 7919]"
+ },
+ "_llm_variants": {
+  "hybrid": {
+   "api": "llm",
+   "sim_frac": 0.5
+  },
+  "llm_only": {
+   "api": "llm",
+   "sim_frac": 0.0
+  }
+ },
+ "_note": "used for eps in {1, 2}. TrajPE v3.2 = candidate E2 of results/tuning/jakarta_v32.md (Jakarta, simulator prior): v3 Gn (configs/v3_small_eps.json) + v3.1 R2a + v3.2 flags. Chosen 2026-10-21 by the pre-stated rule (3 seeds: 50 of 88 bench-v1.1 primary cells won against both dploravp v2 and DP-LoRA v2 7B; Markov MRR 0.0817 / 0.0692). Keys are scripts/run_pe.py flags; the release is the run's output followed by _release_postprocess; scripts/v3_job.sh runs it unchanged when copied to <snapshot>/configs/v3_small_eps.json. Not frozen (the coordinator freezes)."
+}
